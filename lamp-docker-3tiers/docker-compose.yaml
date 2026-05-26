@@ -1,0 +1,58 @@
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: lamp_db
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_USER: lamp_user
+      MYSQL_DATABASE:  lamp_test
+      MYSQL_PASSWORD:  Lamp@2026#Secure
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - lamp_network
+    healthcheck:
+      test: ["CMD" , "mysqladmin" , "ping" , "-h" , "localhost" , "-u" , "lamp_user" , "--password=Lamp@2026#Secure"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  phpfpm:
+    build: ./phpfpm
+    container_name: lamp_phpfpm
+    volumes:
+      - ./www:/var/www/html
+    networks:
+      - lamp_network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD" , "php-fpm" , "-t"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  apache:
+    build: ./apache
+    container_name: lamp_apache
+    ports:
+      - "8000:80"
+    volumes:
+      - ./www:/var/www/html
+    depends_on:
+      phpfpm:
+        condition: service_healthy
+    networks:
+      - lamp_network
+
+
+networks:
+  lamp_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
